@@ -1,11 +1,14 @@
 const { dirname } = require('path');
 const appDir = dirname(require.main.filename);
+const fastcsv = require('fast-csv');
+
 
 const {
     existsSync,
     readFileSync,
     writeFileSync,
     rename,
+    createWriteStream
 } = require('fs');
 
 /*
@@ -28,6 +31,14 @@ function createProperTimeName(val) {
     let time = valsArr[1];
     time = time.split(':').join('-');
     return valsArr[0] + ' ' + time;
+}
+
+function mapPositionToGivenPoints(position, points =[4905, 4930, 4955, 4980, 5005,
+                                                    5030, 5055, 5080, 5105, 5130]) {
+    for (let point of points) {
+        if (position < point || position > point) return points.indexOf(point);
+    }
+    return 0;
 }
 
 
@@ -94,13 +105,32 @@ app
                     if ( err ) console.log('ERROR: ' + err);
                 });
                 const records = JSON.parse(content || '[]');
+                let newFileNameJSON = appDir + '\\reports\\' + `${roll_id}_complete.json`;
+                let newFileNameCSV = appDir + '\\reports\\' + `${roll_id}_complete.csv`;
     
                 writeFileSync(fileName, 
                     JSON.stringify([ ...records, objToWrite]), 
                     { encoding: 'utf8' });
-                rename(fileName, appDir + '\\reports\\' + `${roll_id}_complete.json`, function(err) {
+                rename(fileName, newFileName, function(err) {
                     if ( err ) console.log('ERROR: ' + err);
                 });
+
+                const fileContent = readFileSync(newFileNameJSON, { encoding: 'utf8' }, function(err) {
+                    if ( err ) console.log('ERROR: ' + err);
+                });
+                let fileData = JSON.parse(fileContent);
+
+                fileData.forEach(item => {
+                    item.position = mapPositionToGivenPoints(parseInt(item.position));
+                    item.thickness = Math.round(parseFloat(item.thickness)* 100) / 100;
+                });
+
+                const ws = createWriteStream(newFileNameCSV);
+
+                fastcsv
+                    .write(fileData, { headers: true })
+                    .pipe(ws);
+
                 res.status(200).send(JSON.stringify('written again and renamed file successfully'));
             }
 
