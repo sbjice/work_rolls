@@ -2,13 +2,19 @@ const { dirname } = require('path');
 const appDir = dirname(require.main.filename);
 const fastcsv = require('fast-csv');
 
+const fsPromises = require('fs/promises'); // or require('fs/promises') in v10.0.0
+
+
 
 const {
     existsSync,
     readFileSync,
     writeFileSync,
     rename,
-    createWriteStream
+    createWriteStream,
+    writeFile,
+    readFile
+
 } = require('fs');
 
 /*
@@ -33,12 +39,11 @@ function createProperTimeName(val) {
     return valsArr[0] + ' ' + time;
 }
 
-function mapPositionToGivenPoints(position, points =[4905, 4930, 4955, 4980, 5005,
-                                                    5030, 5055, 5080, 5105, 5130]) {
-    for (let point of points) {
-        if (position < point || position > point) return points.indexOf(point);
+function mapPositionToGivenPoints(position, points =[4905, 4930, 4955, 4980, 5005, 5030, 5055, 5080, 5105, 5130]) {
+    for (const point of points) {
+        if (position > point - 3 && position < point + 3) return points.indexOf(point)+1;
     }
-    return 0;
+    return -1;
 }
 
 
@@ -108,28 +113,49 @@ app
                 let newFileNameJSON = appDir + '\\reports\\' + `${roll_id}_complete.json`;
                 let newFileNameCSV = appDir + '\\reports\\' + `${roll_id}_complete.csv`;
     
-                writeFileSync(fileName, 
+                fsPromises.writeFile(fileName, 
                     JSON.stringify([ ...records, objToWrite]), 
-                    { encoding: 'utf8' });
-                rename(fileName, newFileName, function(err) {
-                    if ( err ) console.log('ERROR: ' + err);
+                    { encoding: 'utf8' })
+                .then(() => {
+                    return fsPromises.rename(fileName, newFileNameJSON);
+                })
+                // .then(() => {
+                //     console.log('file exists', existsSync(newFileNameJSON));
+                // })
+                .catch(er => {
+                    console.log('error after rename');
+                    console.log(er);
+                })
+                .then(() => {
+                    const fileContent = fsPromises.readFile(newFileNameJSON, { encoding: 'utf8' });
+                    return fileContent;
+                })
+                .catch(er => {
+                    console.log('error after read');
+                    console.log(er);
+                })
+                .then((fileContent) => {
+                    // console.log(fileContent);
+                    let fileData = JSON.parse(fileContent);
+    
+                    let newfileData = fileData.map(item => {
+                        item.position = mapPositionToGivenPoints(parseInt(item.position));
+                        item.thickness = Math.round(parseFloat(item.thickness) * 100) / 100;
+                        return {
+                            position: item.position,
+                            thickness: item.thickness
+                        }
+                    });
+    
+                    const ws = createWriteStream(newFileNameCSV);
+    
+                    fastcsv
+                        .write(newfileData, { headers: true })
+                        .pipe(ws);
+                })
+                .catch(er => {
+                    console.log(er);
                 });
-
-                const fileContent = readFileSync(newFileNameJSON, { encoding: 'utf8' }, function(err) {
-                    if ( err ) console.log('ERROR: ' + err);
-                });
-                let fileData = JSON.parse(fileContent);
-
-                fileData.forEach(item => {
-                    item.position = mapPositionToGivenPoints(parseInt(item.position));
-                    item.thickness = Math.round(parseFloat(item.thickness)* 100) / 100;
-                });
-
-                const ws = createWriteStream(newFileNameCSV);
-
-                fastcsv
-                    .write(fileData, { headers: true })
-                    .pipe(ws);
 
                 res.status(200).send(JSON.stringify('written again and renamed file successfully'));
             }
