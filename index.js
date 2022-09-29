@@ -141,6 +141,7 @@ app
                     let newfileData = fileData.map(item => {
                         item.position = mapPositionToGivenPoints(parseInt(item.position));
                         item.thickness = Math.round(parseFloat(item.thickness) * 100) / 100;
+                        item.thickness = String(item.thickness).split('.').join(',');
                         return {
                             position: item.position,
                             thickness: item.thickness
@@ -150,7 +151,7 @@ app
                     const ws = createWriteStream(newFileNameCSV);
     
                     fastcsv
-                        .write(newfileData, { headers: true })
+                        .write(newfileData, { headers: true, delimiter: ';' })
                         .pipe(ws);
                 })
                 .catch(er => {
