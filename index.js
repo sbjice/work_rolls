@@ -39,9 +39,23 @@ function createProperTimeName(val) {
     return valsArr[0] + ' ' + time;
 }
 
-function mapPositionToGivenPoints(position, points =[4905, 4930, 4955, 4980, 5005, 5030, 5055, 5080, 5105, 5130]) {
+// function mapPositionToGivenPoints(position, points =[4905, 4930, 4955, 4980, 5005, 5030, 5055, 5080, 5105, 5130]) {
+//     for (const point of points) {
+//         if (position >= point - 10 && position <= point + 10) return points.indexOf(point) + 1;
+//     }
+//     return -1;
+// }
+
+function mapPositionToGivenPoints(position, points =[4905, 4930, 4955, 4980, 5005,
+    5030, 5055, 5080, 5105, 5130]) {
+    let minDistance = 200; // necessarily big value
     for (const point of points) {
-        if (position > point - 3 && position < point + 3) return points.indexOf(point)+1;
+        const distance = Math.abs(position - point);
+        if (distance < minDistance) minDistance = distance;
+    }
+    for (const point of points) {
+        const distance = Math.abs(position - point);
+        if (distance === minDistance) return points.indexOf(point) + 1;
     }
     return -1;
 }
