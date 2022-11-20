@@ -1,5 +1,11 @@
 const { dirname } = require('path');
-const appDir = dirname(require.main.filename);
+const path = require('path');
+// const appDir = dirname(require.main.filename);
+const appDir = 'C:\\SCADA Projects\\Reports\\БДМ1';
+// const appDir1 = dirname(require.main.filename);
+// console.log('appdir is   ',appDir1);
+
+
 const fastcsv = require('fast-csv');
 
 const fsPromises = require('fs/promises'); // or require('fs/promises') in v10.0.0
@@ -14,7 +20,6 @@ const {
     createWriteStream,
     writeFile,
     readFile
-
 } = require('fs');
 
 /*
@@ -74,6 +79,8 @@ app
     })
     .post((req, res) => {
         console.log(req.body, req.headers);
+        // console.log('appdir is   ',appDir);
+
         if (!req.body.roll_id) {
             res.status(500).send(JSON.stringify('no roll_id'));
             return;
@@ -82,7 +89,10 @@ app
         let { roll_id, stage, time, thickness, position } = req.body;
         roll_id = createProperTimeName(roll_id);
         const objToWrite = { time, position, thickness };
-        const fileName = appDir + '\\reports\\' + `${roll_id}_write.json`;
+        // const fileName = appDir + '\\reports\\' + `${roll_id}_write.json`;
+        const fileName = path.join(appDir, `${roll_id}_write.json`);
+        // console.log(fileName);
+
         if (stage === 'start') {
             console.log(fileName);
             if (existsSync(fileName)) {
@@ -124,9 +134,11 @@ app
                     if ( err ) console.log('ERROR: ' + err);
                 });
                 const records = JSON.parse(content || '[]');
-                let newFileNameJSON = appDir + '\\reports\\' + `${roll_id}_complete.json`;
-                let newFileNameCSV = appDir + '\\reports\\' + `${roll_id}_complete.csv`;
+                // let newFileNameJSON = appDir + '\\reports\\' + `${roll_id}_complete.json`;
+                // let newFileNameCSV = appDir + '\\reports\\' + `${roll_id}_complete.csv`;
     
+                let newFileNameJSON = path.join(appDir, `${roll_id}_complete.json`);
+                let newFileNameCSV = path.join(appDir, `${roll_id}_complete.csv`);
                 fsPromises.writeFile(fileName, 
                     JSON.stringify([ ...records, objToWrite]), 
                     { encoding: 'utf8' })
