@@ -86,9 +86,9 @@ app
             return;
         }
         // const stage = req.body.stage; // start, finish, ongoing;
-        let { roll_id, stage, time, thickness, position } = req.body;
+        let { roll_id, stage, time, thickness, position, length, pass } = req.body;
         roll_id = createProperTimeName(roll_id);
-        const objToWrite = { time, position, thickness };
+        const objToWrite = { time, position, thickness, length, pass };
         // const fileName = appDir + '\\reports\\' + `${roll_id}_write.json`;
         const fileName = path.join(appDir, `${roll_id}_write.json`);
         // console.log(fileName);
@@ -168,9 +168,14 @@ app
                         item.position = mapPositionToGivenPoints(parseInt(item.position));
                         item.thickness = Math.round(parseFloat(item.thickness) * 100) / 100;
                         item.thickness = String(item.thickness).split('.').join(',');
+                        item.length = Math.round(parseFloat(item.length) * 100) / 100;
+                        item.length = String(item.length).split('.').join(',');
                         return {
                             position: item.position,
-                            thickness: item.thickness
+                            thickness: item.thickness,
+                            length: item.length,
+                            pass: item.pass,
+                            time: item.time,
                         }
                     });
     

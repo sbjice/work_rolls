@@ -11,7 +11,8 @@
   "dependencies": {
     "cross-env": "^7.0.3",
     "express": "^4.18.1",
-    "fast-csv": "^4.3.6"
+    "fast-csv": "^4.3.6",
+    "mssql": "^9.1.1"
   },
   "devDependencies": {
     "browser-sync": "^2.27.10",
