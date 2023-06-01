@@ -179,7 +179,7 @@ const updateExistingRecord = (sql, sqlConfig, machineID, newState) => {
 // machineID, rollID, rollTempName
 // data
 
-const sendDataByTransaction = (sql, sqlConfig, machineID, rollID, rollTempName) => {
+const sendDataByTransaction = (sql, sqlConfig, machineID, rollID, appDir, rollTempName) => {
 
     return new Promise((resolve, reject) => {
 
@@ -197,7 +197,12 @@ const sendDataByTransaction = (sql, sqlConfig, machineID, rollID, rollTempName) 
                     if (err) reject(err);
                     return readDataFromFile(path.join(appDir,rollTempName))
                         .then(data => {
+                          if (data.length >= 401){
                             return convertDataToString(data, machineID, rollID, rollTempName);
+                          } else {
+                            pool.close();
+                            reject('file too small');
+                          }
                         })
                         .catch(err => {
                             pool.close();
@@ -236,7 +241,7 @@ const appDir = 'C:\\SCADA Projects\\Reports\\БДМ1';
 // path.join(appDir, `${roll_id}_write.json`)
 // const fileName = 'C:\\SCADA Projects\\Reports\\БДМ1\\Б-38_№_1#2023-05-26 08-46-15_complete.csv';
 
-sendDataByTransaction(sql, sqlConfig, machines['Б-38_№_1'], rollID, fileName)
+sendDataByTransaction(sql, sqlConfig, machines['Б-38_№_1'], rollID, appDir, fileName)
     .then(res => console.log(res))
     .catch(err => console.log('error happened: \n', err));
 
