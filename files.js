@@ -5,12 +5,14 @@ const fsPromises = require('fs/promises');
 
 const readDataFromFile = (filepath) => {
   const rowsData = [];
+  // console.log(filepath);
   return fsPromises.readFile(`${filepath}`, { encoding: 'utf8' })
     .then(fastcsv.parse({ headers: true }))
     .catch(error => {
       return error;
     })
     .then(data => {
+      // console.log(data);
         return data.split('\n');
     })
     .then(data => {

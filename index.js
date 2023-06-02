@@ -7,7 +7,7 @@ const appDir = 'C:\\SCADA Projects\\Reports\\БДМ1';
 // const appDir1 = dirname(require.main.filename);
 // console.log('appdir is   ',appDir1);
 
-import {
+const {
     sql,
     sqlConfig,
     rollStates,
@@ -16,7 +16,7 @@ import {
     insertNewRecord,
     updateExistingRecord,
     sendDataByTransaction,
-} from './db';
+} = require('./db.js');
 
 
 const fastcsv = require('fast-csv');
@@ -85,14 +85,14 @@ app.use(express.json())
 app
     .route('/')
     .get((req, res) => {
-        console.log(req.body, req.headers);
+        console.log(req.body);
         res.json({
             uid: 1,
             name: 'sb_jice'
         });
     })
     .post((req, res) => {
-        console.log(req.body, req.headers);
+        console.log(req.body);
         // console.log('appdir is   ',appDir);
 
         if (!req.body.roll_id) {
@@ -130,8 +130,8 @@ app
             }
             writeFileSync(fileName,
                 JSON.stringify([objToWrite]), {
-                    encoding: 'utf8'
-                },
+                encoding: 'utf8'
+            },
                 function (err) {
                     if (err) console.log('ERROR: ' + err);
                 });
@@ -139,13 +139,27 @@ app
             // создание новой целевой записи в бд (внутри ф-ии по дефолту ставится состояние 1 - старт)
             getTargetRecord(sql, sqlConfig, machines[machineName])
                 .then(res => {
-                    if (res.Current_state === 2) {
+                    console.log('result of getTargetRecord');
+                    console.log(res);
+                    if (!res) {
+                        insertNewRecord(sql, sqlConfig, machines[machineName], roll_id)
+                            .then(res => {
+                                console.log('new roll state record created');
+                                console.log(res);
+                            })
+                            .catch(err => {
+                                console.log('error happened on new target record insert!');
+                                console.log(err);
+                            });
+                    }
+                    if (res.Current_state === 2 || res.Current_state === 1) {
                         updateExistingRecord(sql, sqlConfig, machines[machineName], rollStates['start'])
                             .catch(err => {
                                 console.log('error happened on target record update!');
                                 console.log(err);
                             });
                     } else if (res.Current_state !== 2) {
+
                         insertNewRecord(sql, sqlConfig, machines[machineName], roll_id)
                             .catch(err => {
                                 console.log('error happened on new target record insert!');
@@ -153,7 +167,7 @@ app
                             });
                         // еще здесь предполагалось добавить проверку по времени предыдущей вставки целевой записи
                         // чтобы можно было перевести эту целевую запись в состояние 'cancelled'
-                    } 
+                    }
                 })
                 .catch(err => {
                     console.log('error happened on target record get or update!');
@@ -175,8 +189,8 @@ app
 
             writeFileSync(fileName,
                 JSON.stringify([...records, objToWrite]), {
-                    encoding: 'utf8'
-                },
+                encoding: 'utf8'
+            },
                 function (err) {
                     if (err) console.log('ERROR: ' + err);
                 });
@@ -202,9 +216,9 @@ app
                 let newFileNameJSON = path.join(appDir, `${roll_id}_complete.json`);
                 let newFileNameCSV = path.join(appDir, `${roll_id}_complete.csv`);
                 fsPromises.writeFile(fileName,
-                        JSON.stringify([...records, objToWrite]), {
-                            encoding: 'utf8'
-                        })
+                    JSON.stringify([...records, objToWrite]), {
+                    encoding: 'utf8'
+                })
                     .then(() => {
                         return fsPromises.rename(fileName, newFileNameJSON);
                     })
@@ -258,10 +272,16 @@ app
                     })
                     .then((targetRecordData) => {
                         const Roll_ID = targetRecordData.Roll_ID;
-                        return sendDataByTransaction(sql, sqlConfig, machines[machineName], Roll_ID, appDir, roll_id);
+                        return sendDataByTransaction(sql, sqlConfig, machines[machineName], Roll_ID, newFileNameCSV, roll_id);
+                    })
+                    .then((res) => {
+                        if (res) {
+                            updateExistingRecord(sql, sqlConfig, machines[machineName], rollStates.complete);
+                        }
                     })
                     .catch(err => {
                         console.log(err);
+                        updateExistingRecord(sql, sqlConfig, machines[machineName], rollStates.cancelled);
                     });
 
                 res.status(200).send(JSON.stringify('written again and renamed file successfully'));
