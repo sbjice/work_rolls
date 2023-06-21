@@ -13,16 +13,16 @@ const splitDataRecordsToChunks = (data, chunkLength = 350) => {
     if (i === 0) {
       boundary = {
         start: 0,
-        end: chunkLength - 1,
+        end: chunkLength,
       } 
     } else if (i === Math.ceil(data.length / chunkLength) - 1) {
       boundary = {
-        start: chunksBoundaries[i - 1].end + 1,
-        end: data.length - 1,
+        start: chunksBoundaries[i - 1].end,
+        end: data.length,
       } 
     } else {
       boundary = {
-        start: chunksBoundaries[i - 1].end + 1,
+        start: chunksBoundaries[i - 1].end,
         end: chunksBoundaries[i - 1].end + chunkLength,
       } 
     }
@@ -104,16 +104,9 @@ const convertDataToString = (data, machineID, rollID, rollTempName) => {
 
 const convertDataToArrayOfRequests = (data, machineID, rollID, rollTempName) => {
   const dataWithoutHeaders = data.slice(1);
-  if (dataWithoutHeaders.length <= 350) {
-    const req = dataWithoutHeaders
-    .map((row, ind) => {
-      // (Roll_ID, Roll_temp_name, Position, Thickness, Machine_ID, Time_stamp, Length, Pass)
-      return `('${rollID}', '${rollTempName}', ${row.position}, ${String(row.thickness).replace(',','.')}, '${machineID}', '${row.time}', ${String(row.length).replace(',','.')}, ${row.pass})`;
-    })
-    .join(',\n');
-    return `insert into Rolls_data\nvalues\n${req};`
-  }
+  console.log('rows to insert: ', dataWithoutHeaders.length);
   const boundaries = splitDataRecordsToChunks(dataWithoutHeaders);
+  console.log(boundaries);
   const arrayOfRequests = [];
   for (let {start, end} of boundaries) {
     let req = dataWithoutHeaders
@@ -123,7 +116,10 @@ const convertDataToArrayOfRequests = (data, machineID, rollID, rollTempName) => 
         return `('${rollID}', '${rollTempName}', ${row.position}, ${String(row.thickness).replace(',','.')}, '${machineID}', '${row.time}', ${String(row.length).replace(',','.')}, ${row.pass})`;
       })
       .join(',\n');
-    req = `insert into Rolls_data\nvalues\n${req};`
+    req = 
+`insert into Rolls_data
+values
+${req};`
     arrayOfRequests.push(req);
   }
   return arrayOfRequests;
@@ -140,25 +136,25 @@ module.exports = {
   convertDataToArrayOfRequests
 };
 
-const fileName = 'Б-38_№_1#2023-06-05 01-14-54_complete.csv';
-const machineID = '1250c3fc-945d-11e1-b402-00155d642f01';
-const rollID = 'e962805e-e6b8-4924-b161-6ccfa281f3c0';
+// const fileName = 'Б-38_№_1#2023-06-05 01-14-54_complete.csv';
+// const machineID = '1250c3fc-945d-11e1-b402-00155d642f01';
+// const rollID = 'e962805e-e6b8-4924-b161-6ccfa281f3c0';
 
-readDataFromFile(fileName)
-  // .then(data => console.log(data))
-  // .then(data => {
-  //   const req_str = convertDataToString(data, machineID, rollID, fileName);
-  //   // console.log(req_str.length);
-  //   return req_str;
-  // })
-  .then(data => {
-    const reqArr = convertDataToArrayOfRequests(data, machineID, rollID, fileName);
-    return reqArr;
-  })
-  .then(data => {
-    // data.forEach(item => console.log(item.length)); 
-    data.forEach(async(item, index) => await fsPromises.writeFile(`${index}.txt`, item));
-  })
+// readDataFromFile(fileName)
+//   .then(data => console.log(data))
+//   .then(data => {
+//     const req_str = convertDataToString(data, machineID, rollID, fileName);
+//     // console.log(req_str.length);
+//     return req_str;
+//   })
+//   .then(data => {
+//     const reqArr = convertDataToArrayOfRequests(data, machineID, rollID, fileName);
+//     return reqArr;
+//   })
+//   .then(data => {
+//     // data.forEach(item => console.log(item.length)); 
+//     data.forEach(async(item, index) => await fsPromises.writeFile(`${index}.txt`, item));
+//   })
 //   .then(val => console.log(val))
 //   .catch(err => {
 //     console.log('error happened');

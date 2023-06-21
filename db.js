@@ -1,6 +1,6 @@
 const sql = require('mssql');
 const path = require('path');
-const { convertDataToString, readDataFromFile } = require('./files');
+const { convertDataToString, readDataFromFile, convertDataToArrayOfRequests } = require('./files');
 
 const sqlConfig = {
     user: 'SB',
@@ -189,59 +189,55 @@ const sendDataByTransaction = (sql, sqlConfig, machineID, rollID, filename, roll
 
         sql.connect(sqlConfig).then(pool => {
 
-            const transaction = new sql.Transaction(pool);
-            transaction.begin(err => {
-                if (err) reject(err);
+            return readDataFromFile(filename)
+                .then(data => {
 
-                transaction.commit(err => {
-                    if (err) reject(err);
-                    return readDataFromFile(filename)
-                        .then(data => {
-                          if (data.length >= 401){
-                            return convertDataToString(data, machineID, rollID, rollTempName);
-                          } else {
-                            pool.close();
-                            reject('file too small');
-                          }
-                        })
-                        .catch(err => {
-                            pool.close();
-                            reject(err);
-                        })
-                        .then(dataString => {
-                            //                             (Roll_ID, Roll_temp_name, Position, Thickness, Machine_ID, Time_stamp, Length, Pass)
+                    if (data.length >= 351) {
+                        return convertDataToArrayOfRequests(data, machineID, rollID, rollTempName);
+                    } else {
+                        pool.close();
+                        reject('file too small');
+                    }
+                })
+                .catch(err => {
+                    pool.close();
+                    reject(err);
+                })
+                .then(async requests => {
+                    //                             (Roll_ID, Roll_temp_name, Position, Thickness, Machine_ID, Time_stamp, Length, Pass)
 
-                            const req_str= `insert into Rolls_data 
-                            values 
-                            ${dataString};`;
-                            // const ps = new sql.PreparedStatement(pool);
-                            console.log(req_str);
-                            return pool.request()
-                                .query(req_str)
-                        })
-                        .then(result => {
-                            pool.close();
-                            resolve(result);
-                        })
-                        .catch(err => {
-                            pool.close();
-                            reject(err);
-                        });
+                    if (!(requests instanceof Array)) {
+                        return pool.request()
+                            .query(requests)
+                    } else {
+                        const results = [];
+                        for (req of requests) {
+                            await pool.request()
+                                .query(req)
+                                .then(res => results.push(res))
+                        }
+                        return results;
+                    }
+                    // const ps = new sql.PreparedStatement(pool);
+                })
+                .then(result => {
+                    pool.close();
+                    resolve(result);
+                })
+                .catch(err => {
+                    pool.close();
+                    reject(err);
                 });
-            });
         });
     });
 }
 
 
-const rollID = 'e962805e-e6b8-4924-b161-6ccfa281f3c0';
-const fileName = 'Б-38_№_1#2023-05-23 05-33-58_complete.csv';
+const rollID = 'e962805e-e6b8-4924-b161-123456123456';
+const fileName = 'C:\\SCADA Projects\\Reports\\БДМ1\\Б-38_№_1#2023-06-05 01-14-54_complete.csv';
+const fileNameWithoutAddress = 'Б-38_№_1#2023-06-05 01-14-54_complete.csv';
 
-const appDir = 'C:\\SCADA Projects\\Reports\\БДМ1';
-// path.join(appDir, `${roll_id}_write.json`)
-// const fileName = 'C:\\SCADA Projects\\Reports\\БДМ1\\Б-38_№_1#2023-05-26 08-46-15_complete.csv';
-
-// sendDataByTransaction(sql, sqlConfig, machines['Б-38_№_1'], rollID, appDir, fileName)
+// sendDataByTransaction(sql, sqlConfig, machines['Б-38_№_1'], rollID, fileName, fileNameWithoutAddress)
 //     .then(res => console.log(res))
 //     .catch(err => console.log('error happened: \n', err));
 
