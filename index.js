@@ -92,7 +92,7 @@ app
         });
     })
     .post((req, res) => {
-        console.log(req.body);
+        // console.log(req.body);
         // console.log('appdir is   ',appDir);
 
         if (!req.body.roll_id) {
@@ -110,6 +110,8 @@ app
             pass
         } = req.body;
         roll_id = createProperTimeName(roll_id);
+
+        console.log(`{ req_number = ${req.body.record_number},   thickness = ${Number(thickness).toFixed(2)}, position = ${position}, length = ${Number(length).toFixed(2)}, pass = ${pass} }`)
         const objToWrite = {
             time,
             position,
@@ -123,7 +125,7 @@ app
         const machineName = roll_id.split('#')[0];
 
         if (stage === 'start') {
-            console.log(fileName);
+            console.log('new file created, filename: ', fileName);
             if (existsSync(fileName)) {
                 res.status(500).send(JSON.stringify('file exists'));
                 return;
